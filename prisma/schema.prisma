@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id            Int         @id @default(autoincrement())
+  name          String
+  email         String      @unique
+  password      String
+  role          Role        @default(ADMIN)
+}
+
+model Student {
+  id            Int               @id @default(autoincrement())
+  name          String
+  email         String            @unique
+  password      String            @default("hello@user")
+  usn           String            @unique
+  branchCode    String
+  branch        Branch            @relation(fields: [branchCode], references: [code])
+  semester      Int
+  role          Role              @default(STUDENT)
+  courses       CourseOfStudent[]
+  teachers      StudentTeacher[]
+  attempts       Attempt[]
+}
+
+model Course {
+  id            Int         @id @default(autoincrement())
+  title         String      @unique
+  description   String?
+  courseId      String      @unique
+  students      CourseOfStudent[]
+  teachers      CourseOfTeacher[]
+  quizzes       Quiz[]
+}
+
+model CourseOfStudent {
+  student       Student     @relation(fields: [usn], references: [usn])
+  usn           String
+  course        Course      @relation(fields: [courseId], references: [courseId])
+  courseId      String
+  @@id([usn, courseId])
+}
+
+model Teacher {
+  id            Int                @id @default(autoincrement())
+  name          String
+  initial       String             @unique
+  email         String             @unique
+  password      String             @default("hello@user")
+  role          Role               @default(TEACHER)
+  branches      BranchTeacher[]
+  courses       CourseOfTeacher[]
+  students      StudentTeacher[]
+  quizzes       Quiz[] 
+}
+
+model Branch {
+  id        Int              @id @default(autoincrement())
+  name      String
+  code      String           @unique
+  semester  Int              @default(0)
+  students  Student[]
+  teachers  BranchTeacher[]
+  quizzes   Quiz[]
+}
+
+model BranchTeacher {
+  teacher             Teacher          @relation(fields: [teacherInitial], references: [initial])
+  teacherInitial      String
+  branch              Branch           @relation(fields: [branchCode], references: [code])
+  branchCode          String
+  @@id([teacherInitial, branchCode])
+}
+
+model CourseOfTeacher {
+  teacher             Teacher     @relation(fields: [teacherInitial], references: [initial])
+  teacherInitial      String
+  course              Course      @relation(fields: [courseId], references: [courseId])
+  courseId            String
+  @@id([teacherInitial, courseId])
+}
+
+model StudentTeacher {
+  student           Student    @relation(fields: [usn], references: [usn])
+  usn               String
+  teacher           Teacher    @relation(fields: [teacherInitial], references: [initial])
+  teacherInitial    String
+  @@id([usn, teacherInitial])
+}
+
+model Quiz {
+  id              Int           @id @default(autoincrement())
+  expired         Boolean       @default(false)
+  title           String
+  duration        Int           @default(10)
+  date            DateTime
+  startTime       DateTime
+  endTime         DateTime
+  totalQuestions  Int           // number of questions that each student gets to answer
+  questions       Question[]
+  attempts        Attempt[]   
+  teacherInitial  String
+  teacher         Teacher       @relation(fields: [teacherInitial], references: [initial])
+  courseId        String
+  course          Course        @relation(fields: [courseId], references: [courseId])
+  branchCode      String
+  branch          Branch        @relation(fields: [branchCode], references: [code])
+}
+
+model Question {
+  id                  Int          @id @default(autoincrement()) 
+  questionText        String
+  defaultMark         String
+  numberOfOptions     Int
+  options             Option[]
+  quizId              Int
+  quiz                Quiz         @relation(fields: [quizId], references: [id], onDelete:Cascade)
+  responses           QuestionResponse[]
+}
+
+model Option {
+  id               Int            @id @default(autoincrement())
+  optionText       String 
+  optionMark       String
+  questionId       Int
+  question         Question       @relation(fields: [questionId], references: [id], onDelete:Cascade)
+  responses        QuestionResponse[]
+}
+
+model Attempt {
+  id                Int             @id @default(autoincrement())
+  usn               String
+  student           Student         @relation(fields: [usn], references: [usn])
+  quizId            Int
+  quiz              Quiz            @relation(fields: [quizId], references: [id])
+  response          Response?
+  marksObtained     Int 
+}
+
+model Response {
+  id                  Int                 @id @default(autoincrement())
+  attemptId           Int                 @unique
+  attempt             Attempt             @relation(fields: [attemptId], references: [id])
+  questionResponses   QuestionResponse[]
+}
+
+model QuestionResponse {
+  id                  Int             @id @default(autoincrement())
+  responseId          Int
+  response            Response        @relation(fields: [responseId], references: [id])
+  questionId          Int
+  question            Question        @relation(fields: [questionId], references: [id])
+  selectedOptionId    Int?
+  selectedOption      Option?         @relation(fields: [selectedOptionId], references: [id])
+  marksAwarded        Int?
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+  TEACHER
+}
