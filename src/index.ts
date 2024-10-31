@@ -43,6 +43,12 @@ cron.schedule('*/10 * * * *', async () => {
   }
 });
 
+app.get("/status", (req, res) => {
+  res.status(200).json({
+    message: "server is live"
+  })
+})
+
 app.listen(9000, () => {
   console.log("Server is up and running at port 9000");
 });
